@@ -1,0 +1,238 @@
+export type Trial = {
+  nctId: string;
+  title: string;
+  condition: string;
+  phase: string;
+  status: string;
+  sponsor: string;
+  editingMethod: string;
+  deliveryMethod: string;
+  targetGene: string;
+  location: string;
+  minimumAge: string;
+  maximumAge: string;
+  lastUpdated: string;
+  inclusion: string[];
+  exclusion: string[];
+  endpoint: string;
+  studyType: string;
+};
+
+export const mockTrials: Trial[] = [
+  {
+    nctId: "NCT03745287",
+    title: "CRISPR-Cas9 Therapy for Severe Sickle Cell Disease",
+    condition: "Sickle Cell Disease",
+    phase: "Phase 1/2",
+    status: "Recruiting",
+    sponsor: "Vertex Pharmaceuticals",
+    editingMethod: "CRISPR-Cas9",
+    deliveryMethod: "Ex vivo",
+    targetGene: "BCL11A",
+    location: "United States",
+    minimumAge: "12 Years",
+    maximumAge: "35 Years",
+    lastUpdated: "2026-04-18",
+    inclusion: [
+      "Confirmed severe sickle cell disease",
+      "Eligible for autologous stem cell collection",
+      "Adequate organ function",
+    ],
+    exclusion: [
+      "Prior gene therapy",
+      "Active uncontrolled infection",
+      "Pregnancy or breastfeeding",
+    ],
+    endpoint: "Increase fetal hemoglobin and reduce vaso-occlusive crises",
+    studyType: "Interventional",
+  },
+  {
+    nctId: "NCT05329649",
+    title: "Base Editing Therapy for Transfusion-Dependent Beta Thalassemia",
+    condition: "Beta Thalassemia",
+    phase: "Phase 3",
+    status: "Active",
+    sponsor: "Beam Therapeutics",
+    editingMethod: "Base Editing",
+    deliveryMethod: "Ex vivo",
+    targetGene: "HBG1/HBG2",
+    location: "United States",
+    minimumAge: "18 Years",
+    maximumAge: "50 Years",
+    lastUpdated: "2026-03-29",
+    inclusion: [
+      "Transfusion-dependent beta thalassemia",
+      "Candidate for stem cell transplant procedure",
+      "Stable transfusion history",
+    ],
+    exclusion: [
+      "Prior hematopoietic stem cell transplant",
+      "Clinically significant liver disease",
+      "Active malignancy",
+    ],
+    endpoint: "Transfusion independence and hemoglobin response",
+    studyType: "Interventional",
+  },
+  {
+    nctId: "NCT03872479",
+    title: "In Vivo Gene Editing Therapy for Inherited Retinal Disease",
+    condition: "Inherited Retinal Disease",
+    phase: "Phase 2",
+    status: "Completed",
+    sponsor: "Editas Medicine",
+    editingMethod: "CRISPR-Cas9",
+    deliveryMethod: "In vivo",
+    targetGene: "CEP290",
+    location: "United States",
+    minimumAge: "3 Years",
+    maximumAge: "17 Years",
+    lastUpdated: "2026-02-14",
+    inclusion: [
+      "Confirmed inherited retinal disease",
+      "Documented CEP290-associated mutation",
+      "Measurable retinal function",
+    ],
+    exclusion: [
+      "Prior retinal gene therapy",
+      "Ocular condition limiting assessment",
+      "Recent intraocular surgery",
+    ],
+    endpoint: "Change in visual function and retinal sensitivity",
+    studyType: "Interventional",
+  },
+  {
+    nctId: "NCT04925206",
+    title: "Autologous CRISPR-Edited T Cells for Relapsed Leukemia",
+    condition: "Acute Lymphoblastic Leukemia",
+    phase: "Phase 1",
+    status: "Recruiting",
+    sponsor: "University Research Center",
+    editingMethod: "CRISPR-Cas9",
+    deliveryMethod: "Ex vivo",
+    targetGene: "PDCD1",
+    location: "United States",
+    minimumAge: "18 Years",
+    maximumAge: "70 Years",
+    lastUpdated: "2026-05-02",
+    inclusion: [
+      "Relapsed or refractory leukemia",
+      "Measurable disease after standard therapy",
+      "Adequate cardiac and renal function",
+    ],
+    exclusion: [
+      "Active central nervous system disease",
+      "Uncontrolled infection",
+      "Recent investigational therapy",
+    ],
+    endpoint: "Safety, dose-limiting toxicity, and treatment response",
+    studyType: "Interventional",
+  },
+  {
+    nctId: "NCT05144386",
+    title: "Prime Editing Candidate for Genetic Liver Disease",
+    condition: "Genetic Liver Disease",
+    phase: "Phase 1",
+    status: "Not yet recruiting",
+    sponsor: "Prime Medicine",
+    editingMethod: "Prime Editing",
+    deliveryMethod: "Lipid nanoparticle",
+    targetGene: "SERPINA1",
+    location: "United States",
+    minimumAge: "18 Years",
+    maximumAge: "65 Years",
+    lastUpdated: "2026-01-21",
+    inclusion: [
+      "Confirmed genetic liver disease",
+      "Detectable disease-associated variant",
+      "Stable baseline liver function",
+    ],
+    exclusion: [
+      "Advanced liver failure",
+      "Prior in vivo gene-editing therapy",
+      "Active hepatitis infection",
+    ],
+    endpoint: "Safety and target protein reduction",
+    studyType: "Interventional",
+  },
+  {
+    nctId: "NCT04208529",
+    title: "CRISPR-Modified Immune Cells for Solid Tumors",
+    condition: "Solid Tumor",
+    phase: "Phase 1/2",
+    status: "Active",
+    sponsor: "PACT Pharma",
+    editingMethod: "CRISPR-Cas9",
+    deliveryMethod: "Ex vivo",
+    targetGene: "TRAC",
+    location: "United States",
+    minimumAge: "18 Years",
+    maximumAge: "75 Years",
+    lastUpdated: "2026-04-07",
+    inclusion: [
+      "Advanced solid tumor diagnosis",
+      "Tumor antigen expression confirmed",
+      "Progression after standard treatment",
+    ],
+    exclusion: [
+      "Autoimmune disease requiring immunosuppression",
+      "Active brain metastases",
+      "Uncontrolled systemic infection",
+    ],
+    endpoint: "Safety, persistence of edited cells, and tumor response",
+    studyType: "Interventional",
+  },
+  {
+    nctId: "NCT05687110",
+    title: "Base Edited Hematopoietic Stem Cells for Sickle Cell Disease",
+    condition: "Sickle Cell Disease",
+    phase: "Phase 1",
+    status: "Recruiting",
+    sponsor: "Academic Medical Center",
+    editingMethod: "Base Editing",
+    deliveryMethod: "Ex vivo",
+    targetGene: "HBG1/HBG2",
+    location: "United Kingdom",
+    minimumAge: "16 Years",
+    maximumAge: "40 Years",
+    lastUpdated: "2026-05-10",
+    inclusion: [
+      "Sickle cell disease with recurrent severe events",
+      "Suitable for myeloablative conditioning",
+      "Adequate marrow reserve",
+    ],
+    exclusion: [
+      "Prior gene-modified cell therapy",
+      "Severe pulmonary hypertension",
+      "Pregnancy or unwillingness to use contraception",
+    ],
+    endpoint: "Reduction in severe vaso-occlusive events",
+    studyType: "Interventional",
+  },
+  {
+    nctId: "NCT06025084",
+    title: "In Vivo CRISPR Therapy for Transthyretin Amyloidosis",
+    condition: "Transthyretin Amyloidosis",
+    phase: "Phase 2",
+    status: "Recruiting",
+    sponsor: "Intellia Therapeutics",
+    editingMethod: "CRISPR-Cas9",
+    deliveryMethod: "Lipid nanoparticle",
+    targetGene: "TTR",
+    location: "International",
+    minimumAge: "18 Years",
+    maximumAge: "85 Years",
+    lastUpdated: "2026-04-26",
+    inclusion: [
+      "Diagnosed transthyretin amyloidosis",
+      "Measurable TTR protein level",
+      "Stable background therapy",
+    ],
+    exclusion: [
+      "Prior liver transplant",
+      "Severe renal impairment",
+      "Recent investigational drug exposure",
+    ],
+    endpoint: "Serum TTR reduction and safety",
+    studyType: "Interventional",
+  },
+];
