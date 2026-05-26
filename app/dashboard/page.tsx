@@ -1,15 +1,28 @@
+"use client";
+
 import Link from "next/link";
-import { mockTrials, Trial } from "@/data/mockTrials";
+import { useEffect, useMemo, useState } from "react";
+import { mockTrials, type Trial } from "@/data/mockTrials";
+import { DEFAULT_GENE_EDITING_QUERY } from "@/lib/geneEditingPresets";
 
 type CountRow = {
   label: string;
   count: number;
 };
 
-function countBy(getValue: (trial: Trial) => string): CountRow[] {
+type TrialsApiResponse = {
+  trials: Trial[];
+  totalCount: number;
+  source: string;
+};
+
+function countBy(
+  trials: Trial[],
+  getValue: (trial: Trial) => string
+): CountRow[] {
   const counts = new Map<string, number>();
 
-  mockTrials.forEach((trial) => {
+  trials.forEach((trial) => {
     const value = getValue(trial);
     counts.set(value, (counts.get(value) ?? 0) + 1);
   });
@@ -63,23 +76,93 @@ function ChartCard({
 }
 
 export default function DashboardPage() {
-  const phaseRows = countBy((trial) => trial.phase);
-  const statusRows = countBy((trial) => trial.status);
-  const methodRows = countBy((trial) => trial.editingMethod);
-  const deliveryRows = countBy((trial) => trial.deliveryMethod);
-  const conditionRows = countBy((trial) => trial.condition);
-  const locationRows = countBy((trial) => trial.location);
+  const [trials, setTrials] = useState<Trial[]>(mockTrials);
+  const [totalCount, setTotalCount] = useState(mockTrials.length);
+  const [source, setSource] = useState("Local fallback data");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const recruitingCount = mockTrials.filter(
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadDashboardTrials() {
+      setIsLoading(true);
+      setError("");
+
+      try {
+        const params = new URLSearchParams({
+          query: DEFAULT_GENE_EDITING_QUERY,
+          pageSize: "50",
+        });
+        const response = await fetch(`/api/trials?${params.toString()}`, {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}`);
+        }
+
+        const data = (await response.json()) as TrialsApiResponse;
+        setTrials(data.trials);
+        setTotalCount(data.totalCount);
+        setSource(data.source);
+      } catch (caughtError) {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setTrials(mockTrials);
+        setTotalCount(mockTrials.length);
+        setSource("Local fallback data");
+        setError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : "Unable to load dashboard trials"
+        );
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadDashboardTrials();
+
+    return () => controller.abort();
+  }, []);
+
+  const phaseRows = useMemo(() => countBy(trials, (trial) => trial.phase), [trials]);
+  const statusRows = useMemo(
+    () => countBy(trials, (trial) => trial.status),
+    [trials]
+  );
+  const methodRows = useMemo(
+    () => countBy(trials, (trial) => trial.editingMethod),
+    [trials]
+  );
+  const deliveryRows = useMemo(
+    () => countBy(trials, (trial) => trial.deliveryMethod),
+    [trials]
+  );
+  const conditionRows = useMemo(
+    () => countBy(trials, (trial) => trial.condition),
+    [trials]
+  );
+  const locationRows = useMemo(
+    () => countBy(trials, (trial) => trial.location),
+    [trials]
+  );
+
+  const recruitingCount = trials.filter(
     (trial) => trial.status === "Recruiting"
   ).length;
-  const inVivoCount = mockTrials.filter(
+  const inVivoCount = trials.filter(
     (trial) => trial.deliveryMethod === "In vivo"
   ).length;
-  const exVivoCount = mockTrials.filter(
+  const exVivoCount = trials.filter(
     (trial) => trial.deliveryMethod === "Ex vivo"
   ).length;
-  const latestTrials = [...mockTrials]
+  const latestTrials = [...trials]
     .sort((a, b) => b.lastUpdated.localeCompare(a.lastUpdated))
     .slice(0, 5);
 
@@ -87,7 +170,7 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-[#f8f8f4] px-6 py-6 text-zinc-950 sm:px-8 lg:px-10">
       <nav className="mx-auto flex max-w-7xl items-center justify-between border-b border-zinc-200/80 pb-5">
         <Link href="/" className="text-sm font-semibold">
-          CRISPR Landscape
+          Gene Editing Trials
         </Link>
         <div className="flex items-center gap-2">
           <Link
@@ -118,11 +201,18 @@ export default function DashboardPage() {
               Landscape Dashboard
             </p>
             <h1 className="mt-4 text-4xl font-semibold">
-              Analyze the CRISPR trial field
+              Analyze the gene-editing trial field
             </h1>
             <p className="mt-4 max-w-2xl text-zinc-600">
-              Scan the current mock trial set by phase, status, disease,
-              delivery method, geography, and recent updates.
+              Scan live gene-editing trial records by phase, status, disease,
+              editing method, delivery method, geography, and recent updates.
+            </p>
+            <p className="mt-2 text-sm text-zinc-500">
+              {isLoading
+                ? "Loading live landscape data..."
+                : error
+                  ? `Source: ${source}. Fallback reason: ${error}`
+                  : `Source: ${source}`}
             </p>
           </div>
 
@@ -136,9 +226,9 @@ export default function DashboardPage() {
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            ["Total trials", mockTrials.length, "Mock records available"],
+            ["Matched trials", totalCount, "API results available"],
+            ["Loaded sample", trials.length, "Records analyzed below"],
             ["Recruiting", recruitingCount, "Open or actively enrolling"],
-            ["Ex vivo", exVivoCount, "Edited outside the body"],
             ["In vivo", inVivoCount, "Delivered directly in body"],
           ].map(([label, value, caption]) => (
             <div
@@ -209,12 +299,11 @@ export default function DashboardPage() {
               Landscape readout
             </p>
             <h2 className="mt-4 text-2xl font-semibold">
-              Ex vivo studies dominate this snapshot.
+              Delivery patterns are split across modalities.
             </h2>
             <p className="mt-4 text-sm leading-6 text-zinc-300">
-              Most current mock records involve edited cells returned to the
-              patient, while lipid nanoparticle and in vivo approaches appear in
-              smaller but strategically important groups.
+              The loaded sample separates cell-based ex vivo programs from direct
+              in vivo approaches such as AAV and lipid nanoparticle delivery.
             </p>
             <div className="mt-6 grid grid-cols-2 gap-3">
               <div className="rounded-md border border-white/10 bg-white/5 p-4">
@@ -236,7 +325,7 @@ export default function DashboardPage() {
                 Recently updated trials
               </h2>
               <p className="mt-1 text-sm text-zinc-500">
-                Most recent records in the current dataset.
+                Most recent records in the current API result set.
               </p>
             </div>
 
@@ -261,7 +350,7 @@ export default function DashboardPage() {
                           {trial.title}
                         </p>
                         <p className="mt-1 text-xs text-zinc-500">
-                          {trial.condition} · {trial.targetGene}
+                          {trial.condition} - {trial.targetGene}
                         </p>
                       </td>
                       <td className="px-5 py-4">

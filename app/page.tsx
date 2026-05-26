@@ -39,7 +39,7 @@ export default function Home() {
       <section className="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-6 sm:px-8 lg:px-10">
         <nav className="flex items-center justify-between border-b border-zinc-200/80 pb-5">
           <Link href="/" className="text-sm font-semibold tracking-tight">
-            CRISPR Landscape
+            Gene Editing Trials
           </Link>
 
           <div className="flex items-center gap-2">
@@ -58,7 +58,7 @@ export default function Home() {
         <div className="grid flex-1 items-center gap-10 py-12 lg:grid-cols-[0.85fr_1.15fr] lg:py-16">
           <div>
             <p className="mb-5 text-sm font-semibold uppercase tracking-[0.24em] text-teal-700">
-              CRISPR Intelligence Platform
+              Gene Editing Intelligence Platform
             </p>
 
             <h1 className="max-w-2xl text-5xl font-semibold leading-[1.04] text-zinc-950 sm:text-6xl">
@@ -66,9 +66,9 @@ export default function Home() {
             </h1>
 
             <p className="mt-6 max-w-xl text-lg leading-8 text-zinc-600">
-              Search public trial records, scan the CRISPR landscape, and line
-              up eligibility criteria across studies without maintaining a
-              manual spreadsheet.
+              Search public trial records across CRISPR, base editing, prime
+              editing, RNA editing, TALEN, ZFN, and in vivo delivery programs
+              without maintaining a manual spreadsheet.
             </p>
 
             <div className="mt-9 flex flex-wrap items-center gap-3">
@@ -88,16 +88,16 @@ export default function Home() {
 
             <dl className="mt-12 grid max-w-xl grid-cols-3 gap-6 border-t border-zinc-200 pt-6">
               <div>
-                <dt className="text-2xl font-semibold text-zinc-950">250+</dt>
-                <dd className="mt-1 text-sm text-zinc-600">trials tracked</dd>
+                <dt className="text-2xl font-semibold text-zinc-950">50+</dt>
+                <dd className="mt-1 text-sm text-zinc-600">loaded per page</dd>
               </div>
               <div>
-                <dt className="text-2xl font-semibold text-zinc-950">6</dt>
-                <dd className="mt-1 text-sm text-zinc-600">research filters</dd>
+                <dt className="text-2xl font-semibold text-zinc-950">7</dt>
+                <dd className="mt-1 text-sm text-zinc-600">modality presets</dd>
               </div>
               <div>
-                <dt className="text-2xl font-semibold text-zinc-950">24h</dt>
-                <dd className="mt-1 text-sm text-zinc-600">refresh cycle</dd>
+                <dt className="text-2xl font-semibold text-zinc-950">Live</dt>
+                <dd className="mt-1 text-sm text-zinc-600">public API data</dd>
               </div>
             </dl>
           </div>
@@ -107,10 +107,10 @@ export default function Home() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-zinc-950">
-                    Trial search preview
+                    Gene-editing search preview
                   </p>
                   <p className="mt-1 text-sm text-zinc-500">
-                    Query, filter, select, then compare.
+                    Choose a modality, filter results, then compare.
                   </p>
                 </div>
                 <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700">
@@ -121,20 +121,24 @@ export default function Home() {
 
             <div className="p-5">
               <div className="rounded-md border border-zinc-200 bg-[#fbfbf8] px-4 py-3 text-sm text-zinc-500">
-                sickle cell CRISPR BCL11A
+                CRISPR OR base editing OR prime editing OR TALEN
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
-                {["Recruiting", "Phase 1/2", "Ex vivo", "Target gene"].map(
-                  (filter) => (
+                {[
+                  "CRISPR",
+                  "Base editing",
+                  "Prime editing",
+                  "RNA editing",
+                  "TALEN / ZFN",
+                ].map((filter) => (
                     <span
                       key={filter}
                       className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600"
                     >
                       {filter}
                     </span>
-                  )
-                )}
+                  ))}
               </div>
 
               <div className="mt-5 overflow-hidden rounded-md border border-zinc-200">
@@ -176,8 +180,8 @@ export default function Home() {
 
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
                 {[
-                  ["Method", "CRISPR-Cas9"],
-                  ["Delivery", "Ex vivo"],
+                  ["Scope", "Gene editing"],
+                  ["Delivery", "Ex vivo / in vivo"],
                   ["Comparator", "Eligibility"],
                 ].map(([label, value]) => (
                   <div

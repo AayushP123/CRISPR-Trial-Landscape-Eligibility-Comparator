@@ -1,13 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { mockTrials, Trial } from "@/data/mockTrials";
+import { mockTrials, type Trial } from "@/data/mockTrials";
+import { DEFAULT_GENE_EDITING_QUERY } from "@/lib/geneEditingPresets";
 
 type CompareField = {
   label: string;
   getValue: (trial: Trial) => string;
+};
+
+type TrialsApiResponse = {
+  trials: Trial[];
+};
+
+type TrialApiResponse = {
+  trial: Trial;
 };
 
 const summaryFields: CompareField[] = [
@@ -22,6 +31,66 @@ const summaryFields: CompareField[] = [
   { label: "Age range", getValue: (trial) => `${trial.minimumAge} - ${trial.maximumAge}` },
   { label: "Primary endpoint", getValue: (trial) => trial.endpoint },
 ];
+
+function escapeCsvCell(value: string) {
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
+function buildComparisonCsv(trials: Trial[]) {
+  const rows = [
+    [
+      "NCT ID",
+      "Title",
+      "Condition",
+      "Phase",
+      "Status",
+      "Sponsor",
+      "Editing method",
+      "Delivery method",
+      "Target gene",
+      "Location",
+      "Age range",
+      "Primary endpoint",
+      "Inclusion criteria",
+      "Exclusion criteria",
+      "Last updated",
+    ],
+    ...trials.map((trial) => [
+      trial.nctId,
+      trial.title,
+      trial.condition,
+      trial.phase,
+      trial.status,
+      trial.sponsor,
+      trial.editingMethod,
+      trial.deliveryMethod,
+      trial.targetGene,
+      trial.location,
+      `${trial.minimumAge} - ${trial.maximumAge}`,
+      trial.endpoint,
+      trial.inclusion.join("; "),
+      trial.exclusion.join("; "),
+      trial.lastUpdated,
+    ]),
+  ];
+
+  return rows.map((row) => row.map(escapeCsvCell).join(",")).join("\n");
+}
+
+function downloadCsv(trials: Trial[]) {
+  const csv = buildComparisonCsv(trials);
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const date = new Date().toISOString().slice(0, 10);
+
+  link.href = url;
+  link.download = `gene-editing-trial-comparison-${date}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
 
 export default function ComparePage() {
   return (
@@ -50,7 +119,7 @@ function CompareContent() {
     const rawTrials = searchParams.get("trials");
 
     if (!rawTrials) {
-      return mockTrials.slice(0, 3).map((trial) => trial.nctId);
+      return [];
     }
 
     return rawTrials
@@ -58,13 +127,82 @@ function CompareContent() {
       .map((id) => id.trim())
       .filter(Boolean);
   }, [searchParams]);
+  const [selectedTrials, setSelectedTrials] = useState<Trial[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const selectedTrials = useMemo(() => {
-    const trials = selectedIds
-      .map((id) => mockTrials.find((trial) => trial.nctId === id))
-      .filter((trial): trial is Trial => Boolean(trial));
+  useEffect(() => {
+    const controller = new AbortController();
 
-    return trials.length > 0 ? trials : mockTrials.slice(0, 3);
+    async function loadSelectedTrials() {
+      setIsLoading(true);
+      setError("");
+
+      try {
+        if (selectedIds.length === 0) {
+          const params = new URLSearchParams({
+            query: DEFAULT_GENE_EDITING_QUERY,
+            pageSize: "3",
+          });
+          const response = await fetch(`/api/trials?${params.toString()}`, {
+            signal: controller.signal,
+          });
+
+          if (!response.ok) {
+            throw new Error(`API returned ${response.status}`);
+          }
+
+          const data = (await response.json()) as TrialsApiResponse;
+          setSelectedTrials(data.trials);
+          return;
+        }
+
+        const trialResponses = await Promise.all(
+          selectedIds.map(async (id) => {
+            const response = await fetch(`/api/trials/${id}`, {
+              signal: controller.signal,
+            });
+
+            if (!response.ok) {
+              throw new Error(`Trial ${id} returned ${response.status}`);
+            }
+
+            const data = (await response.json()) as TrialApiResponse;
+            return data.trial;
+          })
+        );
+
+        setSelectedTrials(trialResponses);
+      } catch (caughtError) {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        const fallbackTrials =
+          selectedIds.length > 0
+            ? selectedIds
+                .map((id) => mockTrials.find((trial) => trial.nctId === id))
+                .filter((trial): trial is Trial => Boolean(trial))
+            : [];
+
+        setSelectedTrials(
+          fallbackTrials.length > 0 ? fallbackTrials : mockTrials.slice(0, 3)
+        );
+        setError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : "Unable to load selected trials"
+        );
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadSelectedTrials();
+
+    return () => controller.abort();
   }, [selectedIds]);
 
   const searchHref = `/search`;
@@ -73,7 +211,7 @@ function CompareContent() {
     <main className="min-h-screen bg-[#f8f8f4] px-6 py-6 text-zinc-950 sm:px-8 lg:px-10">
       <nav className="mx-auto flex max-w-7xl items-center justify-between border-b border-zinc-200/80 pb-5">
         <Link href="/" className="text-sm font-semibold">
-          CRISPR Landscape
+          Gene Editing Trials
         </Link>
         <div className="flex items-center gap-2">
           <Link
@@ -110,6 +248,13 @@ function CompareContent() {
               Review trial design, gene-editing method, age range, endpoints,
               and eligibility criteria side by side.
             </p>
+            <p className="mt-2 text-sm text-zinc-500">
+              {isLoading
+                ? "Loading live trial details..."
+                : error
+                  ? `Showing fallback data because ${error}`
+                  : "Source: ClinicalTrials.gov API v2"}
+            </p>
           </div>
 
           <div className="flex flex-wrap gap-3">
@@ -119,7 +264,12 @@ function CompareContent() {
             >
               Change selection
             </Link>
-            <button className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white">
+            <button
+              type="button"
+              onClick={() => downloadCsv(selectedTrials)}
+              disabled={isLoading || selectedTrials.length === 0}
+              className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
+            >
               Export CSV
             </button>
           </div>

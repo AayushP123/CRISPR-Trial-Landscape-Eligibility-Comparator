@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CRISPR Trial Landscape",
-  description: "Search and compare CRISPR gene-editing clinical trials.",
+  title: "Gene Editing Trial Explorer",
+  description: "Search and compare gene-editing clinical trials.",
 };
 
 export default function RootLayout({
