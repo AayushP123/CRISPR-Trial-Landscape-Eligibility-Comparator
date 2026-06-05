@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { mockTrials, type Trial } from "@/data/mockTrials";
-import { DEFAULT_GENE_EDITING_QUERY } from "@/lib/geneEditingPresets";
 
 type CountRow = {
   label: string;
@@ -12,8 +11,9 @@ type CountRow = {
 
 type TrialsApiResponse = {
   trials: Trial[];
-  totalCount: number;
+  allCount: number;
   source: string;
+  warning?: string;
 };
 
 function countBy(
@@ -78,7 +78,8 @@ function ChartCard({
 export default function DashboardPage() {
   const [trials, setTrials] = useState<Trial[]>(mockTrials);
   const [totalCount, setTotalCount] = useState(mockTrials.length);
-  const [source, setSource] = useState("Local fallback data");
+  const [source, setSource] = useState("Local Next.js API");
+  const [warning, setWarning] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -90,11 +91,7 @@ export default function DashboardPage() {
       setError("");
 
       try {
-        const params = new URLSearchParams({
-          query: DEFAULT_GENE_EDITING_QUERY,
-          pageSize: "50",
-        });
-        const response = await fetch(`/api/trials?${params.toString()}`, {
+        const response = await fetch("/api/trials?pageSize=100", {
           signal: controller.signal,
         });
 
@@ -103,9 +100,11 @@ export default function DashboardPage() {
         }
 
         const data = (await response.json()) as TrialsApiResponse;
+
         setTrials(data.trials);
-        setTotalCount(data.totalCount);
+        setTotalCount(data.allCount);
         setSource(data.source);
+        setWarning(data.warning ?? "");
       } catch (caughtError) {
         if (controller.signal.aborted) {
           return;
@@ -114,10 +113,11 @@ export default function DashboardPage() {
         setTrials(mockTrials);
         setTotalCount(mockTrials.length);
         setSource("Local fallback data");
+        setWarning("");
         setError(
           caughtError instanceof Error
             ? caughtError.message
-            : "Unable to load dashboard trials"
+            : "Unable to load dashboard data"
         );
       } finally {
         if (!controller.signal.aborted) {
@@ -126,7 +126,7 @@ export default function DashboardPage() {
       }
     }
 
-    loadDashboardTrials();
+    void loadDashboardTrials();
 
     return () => controller.abort();
   }, []);
@@ -204,15 +204,15 @@ export default function DashboardPage() {
               Analyze the gene-editing trial field
             </h1>
             <p className="mt-4 max-w-2xl text-zinc-600">
-              Scan live gene-editing trial records by phase, status, disease,
-              editing method, delivery method, geography, and recent updates.
+              Scan API-backed trial records by phase, status, disease, editing
+              method, delivery method, geography, and recent updates.
             </p>
             <p className="mt-2 text-sm text-zinc-500">
               {isLoading
-                ? "Loading live landscape data..."
+                ? "Loading dashboard data..."
                 : error
-                  ? `Source: ${source}. Fallback reason: ${error}`
-                  : `Source: ${source}`}
+                  ? `Source: ${source}. ${error}`
+                  : `Source: ${source}${warning ? ` - Fallback: ${warning}` : ""}`}
             </p>
           </div>
 
@@ -226,7 +226,7 @@ export default function DashboardPage() {
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            ["Matched trials", totalCount, "API results available"],
+            ["Registry matches", totalCount, "ClinicalTrials.gov result count"],
             ["Loaded sample", trials.length, "Records analyzed below"],
             ["Recruiting", recruitingCount, "Open or actively enrolling"],
             ["In vivo", inVivoCount, "Delivered directly in body"],
@@ -325,7 +325,7 @@ export default function DashboardPage() {
                 Recently updated trials
               </h2>
               <p className="mt-1 text-sm text-zinc-500">
-                Most recent records in the current API result set.
+                Most recent records in the current local trial set.
               </p>
             </div>
 

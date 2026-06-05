@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { mockTrials, type Trial } from "@/data/mockTrials";
-import { DEFAULT_GENE_EDITING_QUERY } from "@/lib/geneEditingPresets";
 
 type CompareField = {
   label: string;
@@ -13,10 +12,7 @@ type CompareField = {
 
 type TrialsApiResponse = {
   trials: Trial[];
-};
-
-type TrialApiResponse = {
-  trial: Trial;
+  source: string;
 };
 
 const summaryFields: CompareField[] = [
@@ -128,6 +124,7 @@ function CompareContent() {
       .filter(Boolean);
   }, [searchParams]);
   const [selectedTrials, setSelectedTrials] = useState<Trial[]>([]);
+  const [source, setSource] = useState("Local Next.js API");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -139,40 +136,26 @@ function CompareContent() {
       setError("");
 
       try {
-        if (selectedIds.length === 0) {
-          const params = new URLSearchParams({
-            query: DEFAULT_GENE_EDITING_QUERY,
-            pageSize: "3",
-          });
-          const response = await fetch(`/api/trials?${params.toString()}`, {
-            signal: controller.signal,
-          });
+        const params = new URLSearchParams();
 
-          if (!response.ok) {
-            throw new Error(`API returned ${response.status}`);
-          }
-
-          const data = (await response.json()) as TrialsApiResponse;
-          setSelectedTrials(data.trials);
-          return;
+        if (selectedIds.length > 0) {
+          params.set("ids", selectedIds.join(","));
+        } else {
+          params.set("limit", "3");
         }
 
-        const trialResponses = await Promise.all(
-          selectedIds.map(async (id) => {
-            const response = await fetch(`/api/trials/${id}`, {
-              signal: controller.signal,
-            });
+        const response = await fetch(`/api/trials?${params.toString()}`, {
+          signal: controller.signal,
+        });
 
-            if (!response.ok) {
-              throw new Error(`Trial ${id} returned ${response.status}`);
-            }
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}`);
+        }
 
-            const data = (await response.json()) as TrialApiResponse;
-            return data.trial;
-          })
-        );
+        const data = (await response.json()) as TrialsApiResponse;
 
-        setSelectedTrials(trialResponses);
+        setSelectedTrials(data.trials);
+        setSource(data.source);
       } catch (caughtError) {
         if (controller.signal.aborted) {
           return;
@@ -188,6 +171,7 @@ function CompareContent() {
         setSelectedTrials(
           fallbackTrials.length > 0 ? fallbackTrials : mockTrials.slice(0, 3)
         );
+        setSource("Local fallback data");
         setError(
           caughtError instanceof Error
             ? caughtError.message
@@ -200,7 +184,7 @@ function CompareContent() {
       }
     }
 
-    loadSelectedTrials();
+    void loadSelectedTrials();
 
     return () => controller.abort();
   }, [selectedIds]);
@@ -250,10 +234,10 @@ function CompareContent() {
             </p>
             <p className="mt-2 text-sm text-zinc-500">
               {isLoading
-                ? "Loading live trial details..."
+                ? "Loading selected trials..."
                 : error
-                  ? `Showing fallback data because ${error}`
-                  : "Source: ClinicalTrials.gov API v2"}
+                  ? `Source: ${source}. ${error}`
+                  : `Source: ${source}`}
             </p>
           </div>
 

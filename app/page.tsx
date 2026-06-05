@@ -66,17 +66,17 @@ export default function Home() {
             </h1>
 
             <p className="mt-6 max-w-xl text-lg leading-8 text-zinc-600">
-              Search public trial records across CRISPR, base editing, prime
-              editing, RNA editing, TALEN, ZFN, and in vivo delivery programs
-              without maintaining a manual spreadsheet.
+              Explore API-backed trial records across CRISPR, base editing,
+              prime editing, RNA editing, TALEN, ZFN, and in vivo delivery
+              programs.
             </p>
 
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <Link
-                href="/search"
+              href="/search"
                 className="rounded-md bg-zinc-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800"
               >
-                Explore Trials
+                Search Live Trials
               </Link>
               <Link
                 href="/compare"
@@ -88,16 +88,16 @@ export default function Home() {
 
             <dl className="mt-12 grid max-w-xl grid-cols-3 gap-6 border-t border-zinc-200 pt-6">
               <div>
-                <dt className="text-2xl font-semibold text-zinc-950">50+</dt>
-                <dd className="mt-1 text-sm text-zinc-600">loaded per page</dd>
+                <dt className="text-2xl font-semibold text-zinc-950">Live</dt>
+                <dd className="mt-1 text-sm text-zinc-600">registry data</dd>
               </div>
               <div>
                 <dt className="text-2xl font-semibold text-zinc-950">7</dt>
                 <dd className="mt-1 text-sm text-zinc-600">modality presets</dd>
               </div>
               <div>
-                <dt className="text-2xl font-semibold text-zinc-950">Live</dt>
-                <dd className="mt-1 text-sm text-zinc-600">public API data</dd>
+                <dt className="text-2xl font-semibold text-zinc-950">API</dt>
+                <dd className="mt-1 text-sm text-zinc-600">Next.js backend</dd>
               </div>
             </dl>
           </div>
@@ -110,7 +110,7 @@ export default function Home() {
                     Gene-editing search preview
                   </p>
                   <p className="mt-1 text-sm text-zinc-500">
-                    Choose a modality, filter results, then compare.
+                    Choose a modality, filter API results, then compare.
                   </p>
                 </div>
                 <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700">

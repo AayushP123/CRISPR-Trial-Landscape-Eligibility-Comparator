@@ -2,133 +2,178 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { mockTrials, type Trial } from "@/data/mockTrials";
-import {
-  DEFAULT_GENE_EDITING_QUERY,
-  geneEditingCategories,
-} from "@/lib/geneEditingPresets";
+import { type Trial } from "@/data/mockTrials";
+import { geneEditingCategories } from "@/lib/geneEditingPresets";
+
+type FilterFacets = {
+  statuses: string[];
+  phases: string[];
+  methods: string[];
+};
+
+type TrialFilters = {
+  search: string;
+  status: string;
+  phase: string;
+  method: string;
+  category: string;
+  pageToken?: string;
+};
 
 type TrialsApiResponse = {
   trials: Trial[];
+  allCount: number;
   totalCount: number;
-  source: string;
+  returnedCount: number;
   nextPageToken: string | null;
+  source: string;
+  facets: FilterFacets;
+  warning?: string;
 };
 
 const PAGE_SIZE = 50;
 
-async function fetchTrialPage(
-  query: string,
-  pageToken?: string,
-  signal?: AbortSignal
-) {
-  const params = new URLSearchParams({
-    query,
-    pageSize: String(PAGE_SIZE),
-  });
+const defaultFilters: TrialFilters = {
+  search: "",
+  status: "All",
+  phase: "All",
+  method: "All",
+  category: "All gene editing",
+};
 
-  if (pageToken) {
-    params.set("pageToken", pageToken);
+const emptyFacets: FilterFacets = {
+  statuses: [],
+  phases: [],
+  methods: [],
+};
+
+function buildTrialsUrl(filters: TrialFilters) {
+  const params = new URLSearchParams();
+
+  if (filters.search) {
+    params.set("search", filters.search);
   }
 
-  const response = await fetch(`/api/trials?${params.toString()}`, { signal });
-
-  if (!response.ok) {
-    throw new Error(`API returned ${response.status}`);
+  if (filters.status !== "All") {
+    params.set("status", filters.status);
   }
 
-  return (await response.json()) as TrialsApiResponse;
+  if (filters.phase !== "All") {
+    params.set("phase", filters.phase);
+  }
+
+  if (filters.method !== "All") {
+    params.set("method", filters.method);
+  }
+
+  if (
+    filters.category !== "All gene editing" &&
+    filters.category !== "Custom search"
+  ) {
+    params.set("category", filters.category);
+  }
+
+  params.set("pageSize", String(PAGE_SIZE));
+
+  if (filters.pageToken) {
+    params.set("pageToken", filters.pageToken);
+  }
+
+  const queryString = params.toString();
+  return queryString ? `/api/trials?${queryString}` : "/api/trials";
 }
 
 export default function SearchPage() {
-  const [query, setQuery] = useState(DEFAULT_GENE_EDITING_QUERY);
-  const [activeQuery, setActiveQuery] = useState(DEFAULT_GENE_EDITING_QUERY);
+  const [query, setQuery] = useState("");
+  const [activeSearch, setActiveSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All gene editing");
   const [statusFilter, setStatusFilter] = useState("All");
   const [phaseFilter, setPhaseFilter] = useState("All");
   const [methodFilter, setMethodFilter] = useState("All");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [trials, setTrials] = useState<Trial[]>(mockTrials);
-  const [totalCount, setTotalCount] = useState(mockTrials.length);
-  const [source, setSource] = useState("Local fallback data");
+  const [trials, setTrials] = useState<Trial[]>([]);
+  const [allCount, setAllCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const [source, setSource] = useState("Local Next.js API");
+  const [facets, setFacets] = useState<FilterFacets>(emptyFacets);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [warning, setWarning] = useState("");
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const controller = new AbortController();
-
-    async function loadTrials() {
+  async function loadTrials(filters: TrialFilters, append = false) {
+    if (append) {
+      setIsLoadingMore(true);
+    } else {
       setIsLoading(true);
-      setError("");
+    }
+    setError("");
 
-      try {
-        const data = await fetchTrialPage(activeQuery, undefined, controller.signal);
+    try {
+      const response = await fetch(buildTrialsUrl(filters));
 
-        setTrials(data.trials);
-        setTotalCount(data.totalCount);
-        setSource(data.source);
-        setNextPageToken(data.nextPageToken);
-      } catch (caughtError) {
-        if (controller.signal.aborted) {
-          return;
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+
+      const data = (await response.json()) as TrialsApiResponse;
+
+      setTrials((currentTrials) => {
+        if (!append) {
+          return data.trials;
         }
 
-        setTrials(mockTrials);
-        setTotalCount(mockTrials.length);
-        setSource("Local fallback data");
+        const seenIds = new Set(currentTrials.map((trial) => trial.nctId));
+        const newTrials = data.trials.filter((trial) => !seenIds.has(trial.nctId));
+
+        return [...currentTrials, ...newTrials];
+      });
+      setAllCount(data.allCount);
+      setTotalCount(data.totalCount);
+      setSource(data.source);
+      setFacets(data.facets);
+      setNextPageToken(data.nextPageToken);
+      setWarning(data.warning ?? "");
+    } catch (caughtError) {
+      if (!append) {
+        setTrials([]);
         setNextPageToken(null);
-        setError(
-          caughtError instanceof Error
-            ? caughtError.message
-            : "Unable to load trials"
-        );
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-        }
+      }
+      setTotalCount(0);
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Unable to load trials"
+      );
+    } finally {
+      if (append) {
+        setIsLoadingMore(false);
+      } else {
+        setIsLoading(false);
       }
     }
+  }
 
-    loadTrials();
-
-    return () => controller.abort();
-  }, [activeQuery]);
+  useEffect(() => {
+    void loadTrials(defaultFilters);
+  }, []);
 
   const statuses = useMemo(
-    () => ["All", ...Array.from(new Set(trials.map((trial) => trial.status)))],
-    [trials]
+    () => ["All", ...facets.statuses],
+    [facets.statuses]
   );
-  const phases = useMemo(
-    () => ["All", ...Array.from(new Set(trials.map((trial) => trial.phase)))],
-    [trials]
-  );
-  const methods = useMemo(
-    () => [
-      "All",
-      ...Array.from(new Set(trials.map((trial) => trial.editingMethod))),
-    ],
-    [trials]
-  );
-
-  const filteredTrials = useMemo(() => {
-    return trials.filter((trial) => {
-      const matchesStatus =
-        statusFilter === "All" || trial.status === statusFilter;
-      const matchesPhase = phaseFilter === "All" || trial.phase === phaseFilter;
-      const matchesMethod =
-        methodFilter === "All" || trial.editingMethod === methodFilter;
-
-      return matchesStatus && matchesPhase && matchesMethod;
-    });
-  }, [methodFilter, phaseFilter, statusFilter, trials]);
+  const phases = useMemo(() => ["All", ...facets.phases], [facets.phases]);
+  const methods = useMemo(() => ["All", ...facets.methods], [facets.methods]);
 
   const selectedTrials = trials.filter((trial) =>
     selectedIds.includes(trial.nctId)
   );
   const selectedHref =
     selectedIds.length > 0 ? `/compare?trials=${selectedIds.join(",")}` : "/compare";
+  const recruitingCount = trials.filter(
+    (trial) => trial.status === "Recruiting"
+  ).length;
 
   function toggleTrial(nctId: string) {
     setSelectedIds((current) =>
@@ -139,63 +184,62 @@ export default function SearchPage() {
   }
 
   function resetFilters() {
-    setQuery(DEFAULT_GENE_EDITING_QUERY);
-    setActiveQuery(DEFAULT_GENE_EDITING_QUERY);
+    setQuery("");
+    setActiveSearch("");
     setActiveCategory("All gene editing");
     setStatusFilter("All");
     setPhaseFilter("All");
     setMethodFilter("All");
     setSelectedIds([]);
+    void loadTrials(defaultFilters);
   }
 
   function searchTrials() {
-    setActiveQuery(query.trim() || DEFAULT_GENE_EDITING_QUERY);
-    setActiveCategory("Custom search");
-    setStatusFilter("All");
-    setPhaseFilter("All");
-    setMethodFilter("All");
+    const currentSearch = query.trim();
+    const nextCategory = currentSearch ? "Custom search" : activeCategory;
+
+    setActiveSearch(currentSearch);
+    setActiveCategory(nextCategory);
     setSelectedIds([]);
+    void loadTrials({
+      search: currentSearch,
+      status: statusFilter,
+      phase: phaseFilter,
+      method: methodFilter,
+      category: nextCategory,
+    });
+  }
+
+  function loadMoreTrials() {
+    if (!nextPageToken || isLoadingMore) {
+      return;
+    }
+
+    void loadTrials(
+      {
+        search: activeSearch,
+        status: statusFilter,
+        phase: phaseFilter,
+        method: methodFilter,
+        category: activeCategory,
+        pageToken: nextPageToken,
+      },
+      true
+    );
   }
 
   function applyCategory(category: (typeof geneEditingCategories)[number]) {
-    setQuery(category.query);
-    setActiveQuery(category.query);
+    setQuery("");
+    setActiveSearch("");
     setActiveCategory(category.label);
     setStatusFilter("All");
     setPhaseFilter("All");
     setMethodFilter("All");
     setSelectedIds([]);
-  }
-
-  async function loadMoreTrials() {
-    if (!nextPageToken || isLoadingMore) {
-      return;
-    }
-
-    setIsLoadingMore(true);
-    setError("");
-
-    try {
-      const data = await fetchTrialPage(activeQuery, nextPageToken);
-
-      setTrials((currentTrials) => {
-        const seenIds = new Set(currentTrials.map((trial) => trial.nctId));
-        const newTrials = data.trials.filter((trial) => !seenIds.has(trial.nctId));
-
-        return [...currentTrials, ...newTrials];
-      });
-      setTotalCount((currentTotal) => Math.max(currentTotal, data.totalCount));
-      setSource(data.source);
-      setNextPageToken(data.nextPageToken);
-    } catch (caughtError) {
-      setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Unable to load more trials"
-      );
-    } finally {
-      setIsLoadingMore(false);
-    }
+    void loadTrials({
+      ...defaultFilters,
+      category: category.label,
+    });
   }
 
   return (
@@ -236,32 +280,28 @@ export default function SearchPage() {
               Search the gene-editing trial landscape
             </h1>
             <p className="mt-4 max-w-2xl text-zinc-600">
-              Pull live records from ClinicalTrials.gov across CRISPR, base
-              editing, prime editing, RNA editing, TALEN, ZFN, and in vivo
-              delivery programs.
+              Search, filter, and compare live gene-editing trial records from
+              ClinicalTrials.gov through a Next.js API route.
             </p>
             <p className="mt-2 text-sm text-zinc-500">
               Source: {source} - Scope: {activeCategory}
-              {error ? ` - showing fallback because ${error}` : ""}
+              {activeSearch ? ` - Search: ${activeSearch}` : ""}
+              {warning ? ` - Fallback: ${warning}` : ""}
+              {error ? ` - ${error}` : ""}
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-sm lg:grid-cols-4">
             <div className="rounded-md border border-zinc-200 bg-white px-4 py-3 shadow-sm">
-              <p className="text-2xl font-semibold">{totalCount}</p>
-              <p className="mt-1 text-zinc-500">matched trials</p>
+              <p className="text-2xl font-semibold">{allCount}</p>
+              <p className="mt-1 text-zinc-500">registry matches</p>
             </div>
             <div className="rounded-md border border-zinc-200 bg-white px-4 py-3 shadow-sm">
               <p className="text-2xl font-semibold">{trials.length}</p>
               <p className="mt-1 text-zinc-500">loaded</p>
             </div>
             <div className="rounded-md border border-zinc-200 bg-white px-4 py-3 shadow-sm">
-              <p className="text-2xl font-semibold">
-                {
-                  filteredTrials.filter((trial) => trial.status === "Recruiting")
-                    .length
-                }
-              </p>
+              <p className="text-2xl font-semibold">{recruitingCount}</p>
               <p className="mt-1 text-zinc-500">recruiting</p>
             </div>
             <div className="rounded-md border border-zinc-200 bg-white px-4 py-3 shadow-sm">
@@ -369,9 +409,10 @@ export default function SearchPage() {
               <button
                 type="button"
                 onClick={searchTrials}
-                className="mt-6 h-11 rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800 lg:mt-6"
+                disabled={isLoading}
+                className="mt-6 h-11 rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-300 lg:mt-6"
               >
-                Search
+                {isLoading ? "Loading" : "Search"}
               </button>
             </div>
           </div>
@@ -394,7 +435,7 @@ export default function SearchPage() {
               </thead>
               <tbody>
                 {!isLoading &&
-                  filteredTrials.map((trial) => {
+                  trials.map((trial) => {
                     const isSelected = selectedIds.includes(trial.nctId);
 
                     return (
@@ -414,7 +455,14 @@ export default function SearchPage() {
                           />
                         </td>
                         <td className="px-4 py-4 font-mono text-xs text-teal-700">
-                          {trial.nctId}
+                          <a
+                            href={`https://clinicaltrials.gov/study/${trial.nctId}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="hover:underline"
+                          >
+                            {trial.nctId}
+                          </a>
                         </td>
                         <td className="w-[420px] px-4 py-4">
                           <p className="font-medium text-zinc-950">
@@ -427,7 +475,9 @@ export default function SearchPage() {
                         <td className="px-4 py-4 text-zinc-700">
                           {trial.condition}
                         </td>
-                        <td className="px-4 py-4 text-zinc-700">{trial.phase}</td>
+                        <td className="px-4 py-4 text-zinc-700">
+                          {trial.phase}
+                        </td>
                         <td className="px-4 py-4">
                           <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-700">
                             {trial.status}
@@ -456,12 +506,12 @@ export default function SearchPage() {
             <div className="border-t border-zinc-200 px-5 py-12 text-center">
               <p className="font-semibold text-zinc-950">Loading trials</p>
               <p className="mt-2 text-sm text-zinc-500">
-                Calling your Next.js API route and normalizing trial records.
+                Calling the Next.js API route and normalizing registry records.
               </p>
             </div>
           )}
 
-          {!isLoading && filteredTrials.length === 0 && (
+          {!isLoading && trials.length === 0 && (
             <div className="border-t border-zinc-200 px-5 py-12 text-center">
               <p className="font-semibold text-zinc-950">No trials found</p>
               <p className="mt-2 text-sm text-zinc-500">
@@ -480,7 +530,7 @@ export default function SearchPage() {
               disabled={isLoadingMore}
               className="rounded-md border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-800 transition hover:border-zinc-400 disabled:cursor-not-allowed disabled:text-zinc-400"
             >
-              {isLoadingMore ? "Loading more..." : `Load ${PAGE_SIZE} more trials`}
+              {isLoadingMore ? "Loading more..." : `Load ${PAGE_SIZE} more`}
             </button>
           </div>
         )}

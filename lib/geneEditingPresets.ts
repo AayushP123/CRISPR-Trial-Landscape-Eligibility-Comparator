@@ -1,5 +1,5 @@
 export const DEFAULT_GENE_EDITING_QUERY =
-  'CRISPR OR Cas9 OR Cas12 OR Cas13 OR "base editing" OR "prime editing" OR "RNA editing" OR TALEN OR ZFN OR "zinc finger nuclease" OR "gene-edited"';
+  'CRISPR OR Cas9 OR Cas12 OR Cas13 OR "base editing" OR "prime editing" OR "RNA editing" OR TALEN OR ZFN OR "zinc finger nuclease" OR "gene editing" OR "gene-edited"';
 
 export const geneEditingCategories = [
   {
